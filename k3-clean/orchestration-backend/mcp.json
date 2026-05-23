@@ -1,0 +1,10 @@
+{
+  "mcps": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Read and write local files"
+    }
+  }
+}
