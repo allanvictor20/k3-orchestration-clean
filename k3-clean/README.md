@@ -1,4 +1,4 @@
-# K3 Orchestration
+# Maverix Orchestration
 
 Multi-model AI orchestration platform for African institutions.  
 Python FastAPI backend + React frontend. No Go, no Wails, no desktop bindings.
@@ -8,7 +8,7 @@ Python FastAPI backend + React frontend. No Go, no Wails, no desktop bindings.
 ## Architecture
 
 ```
-k3-orchestration/
+Maverix-orchestration/
 ├── orchestration-backend/      # Python FastAPI — the core engine
 │   ├── main.py                 # FastAPI app, all HTTP endpoints
 │   ├── classifier.py           # Decomposes prompts into typed subtasks

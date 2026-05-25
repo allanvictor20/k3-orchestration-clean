@@ -8,7 +8,7 @@ Provides:
   - Structured event types that match the Wails frontend event constants
 
 The Go stream.go relay connects to this endpoint and re-broadcasts events
-as Wails events.  The React WorkflowView then receives them via window.k3.
+as Wails events.  The React WorkflowView then receives them via window.maverix.
 
 Usage in main.py:
     from streaming import event_bus, stream_workflow_events

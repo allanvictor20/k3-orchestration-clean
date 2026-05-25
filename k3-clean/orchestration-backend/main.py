@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="K3 Orchestration Backend",
+    title="Maverix Orchestration Backend",
     description="Multi-agent AI orchestration for African institutions — with language support, sessions, hooks, and MCP tools",
     version="2.0.0",
     lifespan=lifespan,

@@ -241,7 +241,7 @@ export function OrchestrationPanel() {
               fontSize: 14, fontWeight: 500,
               color: "var(--text-secondary)",
             }}>
-              {activeSession ? activeSession.title : "K3 Orchestration"}
+              {activeSession ? activeSession.title : "Maverix Orchestration"}
             </span>
           </div>
           <LanguageSelector
@@ -282,7 +282,7 @@ export function OrchestrationPanel() {
                 marginBottom: 20,
                 boxShadow: "0 4px 20px rgba(74,144,217,0.25)",
               }}>
-                <span style={{ color: "#fff", fontSize: 22, fontWeight: 600, letterSpacing: "-1px" }}>K3</span>
+                <span style={{ color: "#fff", fontSize: 22, fontWeight: 600, letterSpacing: "-1px" }}>Maverix</span>
               </div>
 
               <h1 style={{
@@ -352,7 +352,7 @@ export function OrchestrationPanel() {
                       marginRight: 12,
                       marginTop: 2,
                     }}>
-                      <span style={{ color: "#fff", fontSize: 10, fontWeight: 600 }}>K3</span>
+                      <span style={{ color: "#fff", fontSize: 10, fontWeight: 600 }}>Maverix</span>
                     </div>
                   )}
 
