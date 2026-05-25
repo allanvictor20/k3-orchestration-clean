@@ -45,66 +45,157 @@ export function SessionHistory({ activeSessionId, onSelectSession, onNewSession 
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#111] border-r border-[#1e1e1e]">
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+      background: "#ffffff",
+      borderRight: "1px solid var(--border)",
+    }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e1e1e]">
-        <span className="text-[10px] font-medium text-[#666] uppercase tracking-widest">
-          Sessions
-        </span>
+      <div style={{
+        padding: "14px 16px 12px",
+        borderBottom: "1px solid var(--border)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* K3 logo mark */}
+          <div style={{
+            width: 26, height: 26,
+            borderRadius: 7,
+            background: "linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <span style={{ color: "#fff", fontSize: 11, fontWeight: 600, letterSpacing: "-0.5px" }}>K3</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
+            Conversations
+          </span>
+        </div>
         <button
           onClick={onNewSession}
-          className="text-xs text-[#555] hover:text-[#aaa] px-1.5 py-0.5 rounded hover:bg-[#1e1e1e] transition-colors"
-          title="New session"
+          title="New conversation"
+          style={{
+            width: 28, height: 28,
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border)",
+            background: "var(--surface-2)",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, lineHeight: 1,
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--blue-light)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--blue)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "#c5d9ef";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+          }}
         >
-          + New
+          +
         </button>
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
         {loading ? (
-          <div className="text-xs text-[#444] text-center py-8">Loading…</div>
+          <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)", fontSize: 13 }}>
+            Loading…
+          </div>
         ) : sessions.length === 0 ? (
-          <div className="text-xs text-[#444] text-center py-8 px-3">
-            No sessions yet.
+          <div style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>💬</div>
+            No conversations yet.<br />
+            Start a new one above.
           </div>
         ) : (
-          sessions.map((session) => (
-            <div
-              key={session.id}
-              onClick={() => onSelectSession(session)}
-              className={`group flex flex-col gap-0.5 px-3 py-2.5 cursor-pointer border-b border-[#1a1a1a] transition-colors ${
-                activeSessionId === session.id
-                  ? "bg-[#1e1e1e] border-l-2 border-l-amber-600"
-                  : "hover:bg-[#161616]"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-1">
-                <span className="text-xs text-[#ccc] leading-tight line-clamp-2 flex-1">
-                  {session.title}
-                </span>
-                <button
-                  onClick={(e) => handleArchive(e, session.id)}
-                  className="opacity-0 group-hover:opacity-100 text-[#444] hover:text-[#888] text-xs transition-all ml-1 flex-shrink-0"
-                  title="Archive"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] text-[#555]">
-                <span>{timeAgo(session.last_active)}</span>
-                <span>·</span>
-                <span>{session.message_count} msgs</span>
-                {session.input_language !== "en" && (
-                  <span title={session.input_language}>
-                    {LANG_FLAGS[session.input_language] ?? "🌍"}
+          sessions.map((session) => {
+            const isActive = activeSessionId === session.id;
+            return (
+              <div
+                key={session.id}
+                onClick={() => onSelectSession(session)}
+                className="group"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                  padding: "9px 10px",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                  marginBottom: 2,
+                  background: isActive ? "var(--blue-light)" : "transparent",
+                  borderLeft: isActive ? "3px solid var(--blue)" : "3px solid transparent",
+                  transition: "all 0.12s",
+                  position: "relative",
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
+                  <span style={{
+                    fontSize: 13,
+                    fontWeight: isActive ? 500 : 400,
+                    color: isActive ? "var(--blue-mid)" : "var(--text-primary)",
+                    lineHeight: 1.35,
+                    flex: 1,
+                    overflow: "hidden",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}>
+                    {session.title}
                   </span>
-                )}
+                  <button
+                    onClick={(e) => handleArchive(e, session.id)}
+                    title="Delete"
+                    style={{
+                      opacity: 0,
+                      flexShrink: 0,
+                      width: 18, height: 18,
+                      borderRadius: 4,
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "opacity 0.15s",
+                    }}
+                    className="session-delete-btn"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-muted)" }}>
+                  <span>{timeAgo(session.last_active)}</span>
+                  <span>·</span>
+                  <span>{session.message_count} msgs</span>
+                  {session.input_language !== "en" && (
+                    <span>{LANG_FLAGS[session.input_language] ?? "🌍"}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      <style>{`
+        .group:hover .session-delete-btn { opacity: 1 !important; }
+      `}</style>
     </div>
   );
 }

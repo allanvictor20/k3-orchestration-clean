@@ -15,11 +15,11 @@ interface Props {
 }
 
 const PROVIDER_COLORS: Record<string, string> = {
-  anthropic:  "#d97706",
+  anthropic:  "#f5835a",
   openai:     "#16a34a",
   perplexity: "#7c3aed",
-  gemini:     "#0284c7",
-  sunbird:    "#db2777",
+  gemini:     "#4a90d9",
+  sunbird:    "#e8a020",
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -63,7 +63,7 @@ export function WorkflowProgress({ workflowId, isRunning }: Props) {
               ? { ...s, status: "running", task_type: event.task_type || "" }
               : s
           ));
-          setPhase("Running…");
+          setPhase("Working on it…");
           addEvent(`${PROVIDER_LABELS[event.provider!] ?? event.provider} → ${event.task_type}`);
           break;
 
@@ -75,7 +75,7 @@ export function WorkflowProgress({ workflowId, isRunning }: Props) {
           ));
           addEvent(
             event.success
-              ? `${PROVIDER_LABELS[event.provider!] ?? event.provider} done (${event.latency_ms}ms)`
+              ? `${PROVIDER_LABELS[event.provider!] ?? event.provider} finished (${event.latency_ms}ms)`
               : `${event.provider} failed: ${event.error}`
           );
           break;
@@ -85,17 +85,17 @@ export function WorkflowProgress({ workflowId, isRunning }: Props) {
           break;
 
         case "merge_started":
-          setPhase("Merging results…");
-          addEvent("Claude is synthesising outputs…");
+          setPhase("Putting it all together…");
+          addEvent("Combining all results…");
           break;
 
         case "workflow_completed":
-          setPhase("Complete ✓");
-          addEvent(`Done — $${event.total_cost_usd?.toFixed(4)} · ${event.total_latency_ms}ms`);
+          setPhase("Done");
+          addEvent(`Completed in ${((event.total_latency_ms ?? 0) / 1000).toFixed(1)}s`);
           break;
 
         case "workflow_failed":
-          setPhase("Failed");
+          setPhase("Something went wrong");
           addEvent(`Error: ${event.error}`);
           break;
       }
@@ -111,40 +111,96 @@ export function WorkflowProgress({ workflowId, isRunning }: Props) {
 
   if (!workflowId && !isRunning) return null;
 
+  const isDone = phase === "Done";
+  const isFailed = phase === "Something went wrong";
+
   return (
-    <div className="border border-[#2a2a2a] rounded-lg bg-[#161616] p-3 space-y-2.5">
+    <div style={{
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius)",
+      background: "#ffffff",
+      padding: "14px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 10,
+      animation: "fadeUp 0.2s ease",
+    }}>
+      {/* Phase indicator */}
       {phase && (
-        <div className="flex items-center gap-2 text-xs text-[#888]">
-          {isRunning && phase !== "Complete ✓" && phase !== "Failed" && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {isRunning && !isDone && !isFailed && (
+            <div style={{
+              width: 16, height: 16, borderRadius: "50%",
+              border: "2px solid var(--blue-light)",
+              borderTopColor: "var(--blue)",
+              animation: "spin 0.8s linear infinite",
+              flexShrink: 0,
+            }} />
           )}
-          <span>{phase}</span>
+          {isDone && (
+            <div style={{
+              width: 16, height: 16, borderRadius: "50%",
+              background: "#dcfce7",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, color: "#16a34a",
+            }}>✓</div>
+          )}
+          {isFailed && (
+            <div style={{
+              width: 16, height: 16, borderRadius: "50%",
+              background: "#fee2e2",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, color: "#dc2626",
+            }}>✗</div>
+          )}
+          <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
+            {phase}
+          </span>
         </div>
       )}
 
+      {/* Subtask pills */}
       {subtasks.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {subtasks.map((s) => {
-            const color = PROVIDER_COLORS[s.provider] ?? "#666";
+            const color = PROVIDER_COLORS[s.provider] ?? "#8a93b0";
             const label = PROVIDER_LABELS[s.provider] ?? s.provider;
-            const icon  = s.status === "running" ? "⏳"
-                        : s.status === "done"    ? "✓"
-                        : s.status === "failed"  ? "✗" : "○";
             return (
               <div
                 key={s.subtask_id}
-                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border"
                 style={{
-                  borderColor: color + "44",
-                  backgroundColor: color + "11",
-                  color: s.status === "running" ? color : "#888",
+                  display: "flex", alignItems: "center", gap: 6,
+                  fontSize: 12, fontWeight: 500,
+                  padding: "4px 10px",
+                  borderRadius: "var(--radius-full)",
+                  border: `1px solid ${color}33`,
+                  background: `${color}12`,
+                  color: s.status === "running" ? color : "var(--text-muted)",
+                  transition: "all 0.2s",
                 }}
               >
-                <span>{icon}</span>
+                {s.status === "running" && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: color,
+                    animation: "pulse-dot 1s ease infinite",
+                    flexShrink: 0,
+                  }} />
+                )}
+                {s.status === "done" && (
+                  <span style={{ color: "#16a34a", fontSize: 11 }}>✓</span>
+                )}
+                {s.status === "failed" && (
+                  <span style={{ color: "#dc2626", fontSize: 11 }}>✗</span>
+                )}
                 <span style={{ color }}>{label}</span>
-                {s.task_type && <span className="text-[#555]">· {s.task_type}</span>}
+                {s.task_type && (
+                  <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>· {s.task_type}</span>
+                )}
                 {s.latency_ms && (
-                  <span className="text-[#555]">{(s.latency_ms / 1000).toFixed(1)}s</span>
+                  <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+                    {(s.latency_ms / 1000).toFixed(1)}s
+                  </span>
                 )}
               </div>
             );
@@ -152,10 +208,13 @@ export function WorkflowProgress({ workflowId, isRunning }: Props) {
         </div>
       )}
 
+      {/* Event log - just last 3 */}
       {events.length > 0 && (
-        <div className="space-y-0.5">
-          {events.slice(-5).map((msg, i) => (
-            <div key={i} className="text-[11px] text-[#555]">{msg}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {events.slice(-3).map((msg, i) => (
+            <div key={i} style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {msg}
+            </div>
           ))}
         </div>
       )}

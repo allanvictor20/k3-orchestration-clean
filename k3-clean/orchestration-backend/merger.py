@@ -1,8 +1,22 @@
 from dotenv import load_dotenv
 load_dotenv()
+import os
 import time
 from models import AgentResult, OrchestrationResponse
-from providers.anthropic import AnthropicProvider
+
+
+def _get_merge_provider():
+    """Pick the best available provider for synthesis, in priority order."""
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        from providers.anthropic import AnthropicProvider
+        return AnthropicProvider()
+    if os.environ.get("OPENAI_API_KEY"):
+        from providers.openai import OpenAIProvider
+        return OpenAIProvider()
+    if os.environ.get("GEMINI_API_KEY"):
+        from providers.gemini import GeminiProvider
+        return GeminiProvider()
+    return None
 
 
 async def merge_results(
@@ -11,9 +25,9 @@ async def merge_results(
     workflow_id: str = "",
 ) -> OrchestrationResponse:
     """
-    Uses Claude to synthesise all agent outputs into one coherent response.
+    Synthesises all agent outputs into one coherent response.
+    Uses the best available provider — Claude if present, else GPT-4o, else Gemini.
     Failed subtasks are noted but do not block the merge.
-    workflow_id is passed explicitly to avoid the fragile split() reconstruction.
     """
     successful = [r for r in results if r.success]
     failed = [r for r in results if not r.success]
@@ -36,7 +50,6 @@ async def merge_results(
         f"[{r.provider.upper()} — task: {r.subtask_id[:8]}]\n{r.output}"
         for r in successful
     ])
-
     failed_note = ""
     if failed:
         failed_note = (
@@ -61,7 +74,22 @@ Instructions:
 
 Unified response:"""
 
-    provider = AnthropicProvider()
+    provider = _get_merge_provider()
+
+    if provider is None:
+        # No LLM available — just concatenate the successful outputs
+        combined = "\n\n".join(r.output for r in successful)
+        total_cost = sum(r.cost_usd for r in results)
+        total_latency = max(r.latency_ms for r in results) if results else 0
+        return OrchestrationResponse(
+            workflow_id=workflow_id,
+            final_output=combined,
+            subtask_results=results,
+            total_cost_usd=round(total_cost, 6),
+            total_latency_ms=total_latency,
+            providers_used=list({r.provider for r in successful}),
+        )
+
     start = time.monotonic()
     final_text, tokens = await provider.complete(synthesis_prompt, max_tokens=2000)
     merge_latency = int((time.monotonic() - start) * 1000)

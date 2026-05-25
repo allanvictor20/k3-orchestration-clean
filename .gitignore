@@ -1,0 +1,4 @@
+.env
+__pycache__/
+venv/
+k3-clean/orchestration-backend/.env

@@ -12,10 +12,6 @@ import { LanguageSelector }  from "./LanguageSelector";
 import { WorkflowProgress }  from "./WorkflowProgress";
 import { SessionHistory }    from "./SessionHistory";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -29,10 +25,6 @@ interface Message {
   created_at: string;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const PROVIDER_LABELS: Record<string, string> = {
   anthropic:  "Claude",
   openai:     "GPT-4o",
@@ -41,25 +33,30 @@ const PROVIDER_LABELS: Record<string, string> = {
   sunbird:    "Sunbird",
 };
 
+const PROVIDER_COLORS: Record<string, string> = {
+  anthropic:  "#f5835a",
+  openai:     "#16a34a",
+  perplexity: "#7c3aed",
+  gemini:     "#4a90d9",
+  sunbird:    "#e8a020",
+};
+
 const LANG_NAMES: Record<string, string> = {
   en: "English", lg: "Luganda", sw: "Swahili",
   ach: "Acholi", nyn: "Runyankole", kin: "Kinyarwanda",
 };
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function OrchestrationPanel() {
-  const [messages,       setMessages]       = useState<Message[]>([]);
-  const [prompt,         setPrompt]         = useState("");
-  const [inputLanguage,  setInputLanguage]  = useState("en");
-  const [outputLanguage, setOutputLanguage] = useState("en");
-  const [isLoading,      setIsLoading]      = useState(false);
+  const [messages,         setMessages]         = useState<Message[]>([]);
+  const [prompt,           setPrompt]           = useState("");
+  const [inputLanguage,    setInputLanguage]    = useState("en");
+  const [outputLanguage,   setOutputLanguage]   = useState("en");
+  const [isLoading,        setIsLoading]        = useState(false);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
-  const [activeSession,  setActiveSession]  = useState<Session | null>(null);
-  const [showSidebar,    setShowSidebar]    = useState(true);
-  const [error,          setError]          = useState<string | null>(null);
+  const [activeSession,    setActiveSession]    = useState<Session | null>(null);
+  const [showSidebar,      setShowSidebar]      = useState(true);
+  const [error,            setError]            = useState<string | null>(null);
+  const [inputFocused,     setInputFocused]     = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
@@ -68,9 +65,13 @@ export function OrchestrationPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ---------------------------------------------------------------------------
-  // Session management
-  // ---------------------------------------------------------------------------
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+    }
+  }, [prompt]);
 
   async function handleNewSession() {
     const session = await createSession({
@@ -87,7 +88,6 @@ export function OrchestrationPanel() {
     setActiveSession(session);
     setActiveWorkflowId(null);
     setError(null);
-
     const detail = await getSession(session.id);
     if (detail.messages) {
       const loaded: Message[] = detail.messages.map((m: SessionMessage) => ({
@@ -105,13 +105,8 @@ export function OrchestrationPanel() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Submit
-  // ---------------------------------------------------------------------------
-
   async function handleSubmit() {
     if (!prompt.trim() || isLoading) return;
-
     const userPrompt = prompt.trim();
     setPrompt("");
     setError(null);
@@ -129,14 +124,10 @@ export function OrchestrationPanel() {
 
     try {
       let response: OrchestrationResponse;
-
       if (activeSession) {
         setActiveWorkflowId(activeSession.id + "-pending");
         response = await sendSessionPrompt(
-          activeSession.id,
-          userPrompt,
-          inputLanguage,
-          outputLanguage
+          activeSession.id, userPrompt, inputLanguage, outputLanguage
         );
       } else {
         const workflowId = crypto.randomUUID();
@@ -185,16 +176,19 @@ export function OrchestrationPanel() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  const isEmpty = messages.length === 0 && !isLoading;
 
   return (
-    <div className="flex h-full bg-[#0d0d0d] text-[#ccc] font-sans">
+    <div style={{
+      display: "flex",
+      height: "100%",
+      background: "var(--bg)",
+      fontFamily: "var(--font)",
+    }}>
 
       {/* Sidebar */}
       {showSidebar && (
-        <div className="w-56 flex-shrink-0">
+        <div style={{ width: "var(--sidebar-width)", flexShrink: 0 }}>
           <SessionHistory
             activeSessionId={activeSession?.id ?? null}
             onSelectSession={handleSelectSession}
@@ -203,20 +197,50 @@ export function OrchestrationPanel() {
         </div>
       )}
 
-      {/* Main panel */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* Main area */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[#1e1e1e] bg-[#111]">
-          <div className="flex items-center gap-3">
+        <div style={{
+          height: "var(--topbar-height)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px",
+          background: "#ffffff",
+          borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
               onClick={() => setShowSidebar((v) => !v)}
-              className="text-[#555] hover:text-[#aaa] text-sm transition-colors"
               title="Toggle sidebar"
+              style={{
+                width: 32, height: 32,
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 16,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)";
+              }}
             >
               ☰
             </button>
-            <span className="text-xs font-medium text-[#555]">
+            <span style={{
+              fontSize: 14, fontWeight: 500,
+              color: "var(--text-secondary)",
+            }}>
               {activeSession ? activeSession.title : "K3 Orchestration"}
             </span>
           </div>
@@ -229,104 +253,326 @@ export function OrchestrationPanel() {
           />
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center text-[#2a2a2a] text-sm mt-20">
-              <div className="text-3xl mb-3">◈</div>
-              <div className="text-[#444]">Multi-model AI orchestration</div>
-              <div className="text-xs mt-1 text-[#333]">
-                Claude · GPT-4o · Perplexity · Gemini · Sunbird
+        {/* Messages area */}
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: isEmpty ? 0 : "24px 0",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+
+          {/* Empty state — centered like Gemini */}
+          {isEmpty && (
+            <div style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px 24px",
+              animation: "fadeUp 0.4s ease",
+            }}>
+              {/* Logo */}
+              <div style={{
+                width: 56, height: 56,
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #4a90d9 0%, #2d72c2 100%)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 20,
+                boxShadow: "0 4px 20px rgba(74,144,217,0.25)",
+              }}>
+                <span style={{ color: "#fff", fontSize: 22, fontWeight: 600, letterSpacing: "-1px" }}>K3</span>
+              </div>
+
+              <h1 style={{
+                fontSize: 26,
+                fontWeight: 400,
+                color: "var(--text-primary)",
+                marginBottom: 8,
+                textAlign: "center",
+              }}>
+                What can I help you with?
+              </h1>
+              <p style={{
+                fontSize: 14,
+                color: "var(--text-muted)",
+                textAlign: "center",
+                maxWidth: 380,
+                lineHeight: 1.6,
+                marginBottom: 32,
+              }}>
+                Multi-model AI orchestration built for African institutions.
+                Ask anything in English, Luganda, Swahili, and more.
+              </p>
+
+              {/* Provider chips */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                {Object.entries(PROVIDER_LABELS).map(([key, label]) => (
+                  <div key={key} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "5px 12px",
+                    borderRadius: "var(--radius-full)",
+                    border: `1px solid ${PROVIDER_COLORS[key]}33`,
+                    background: `${PROVIDER_COLORS[key]}0d`,
+                    fontSize: 12, fontWeight: 500,
+                    color: PROVIDER_COLORS[key],
+                  }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: PROVIDER_COLORS[key], flexShrink: 0,
+                    }} />
+                    {label}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-[#1a1a1a] text-[#ddd] border border-[#2a2a2a]"
-                    : "bg-[#111] text-[#ccc]"
-                }`}
-              >
-                {/* Language badge */}
-                {msg.role === "assistant" && msg.output_language && msg.output_language !== "en" && (
-                  <div className="text-[10px] text-[#555] mb-1.5">
-                    Response in {LANG_NAMES[msg.output_language] ?? msg.output_language}
-                  </div>
-                )}
+          {/* Messages */}
+          {!isEmpty && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  style={{
+                    padding: "16px 24px",
+                    display: "flex",
+                    justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                    animation: "fadeUp 0.2s ease",
+                  }}
+                >
+                  {msg.role === "assistant" && (
+                    <div style={{
+                      width: 30, height: 30,
+                      borderRadius: 8,
+                      background: "linear-gradient(135deg, #4a90d9 0%, #2d72c2 100%)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                      marginRight: 12,
+                      marginTop: 2,
+                    }}>
+                      <span style={{ color: "#fff", fontSize: 10, fontWeight: 600 }}>K3</span>
+                    </div>
+                  )}
 
-                <div className="whitespace-pre-wrap">{msg.content}</div>
-
-                {/* Metadata */}
-                {msg.role === "assistant" && msg.providers_used && (
-                  <div className="mt-2 pt-2 border-t border-[#1e1e1e] flex flex-wrap gap-2 text-[10px] text-[#444]">
-                    <span>
-                      {msg.providers_used.map((p) => PROVIDER_LABELS[p] ?? p).join(" · ")}
-                    </span>
-                    {msg.total_latency_ms && (
-                      <span>{(msg.total_latency_ms / 1000).toFixed(1)}s</span>
+                  <div style={{
+                    maxWidth: msg.role === "user" ? "72%" : "78%",
+                    ...(msg.role === "user" ? {
+                      background: "var(--blue-light)",
+                      border: "1px solid #d0e6f7",
+                      borderRadius: "var(--radius) var(--radius) 4px var(--radius)",
+                      padding: "10px 16px",
+                    } : {
+                      background: "transparent",
+                      padding: "2px 0",
+                    }),
+                  }}>
+                    {msg.role === "assistant" && msg.output_language && msg.output_language !== "en" && (
+                      <div style={{
+                        fontSize: 11, color: "var(--text-muted)",
+                        marginBottom: 6,
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}>
+                        <span>🌍</span>
+                        <span>Response in {LANG_NAMES[msg.output_language] ?? msg.output_language}</span>
+                      </div>
                     )}
-                    {msg.total_cost_usd !== undefined && msg.total_cost_usd > 0 && (
-                      <span>${msg.total_cost_usd.toFixed(4)}</span>
+
+                    <div style={{
+                      fontSize: 15,
+                      lineHeight: 1.65,
+                      color: msg.role === "user" ? "var(--blue-mid)" : "var(--text-primary)",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}>
+                      {msg.content}
+                    </div>
+
+                    {/* Metadata row */}
+                    {msg.role === "assistant" && msg.providers_used && msg.providers_used.length > 0 && (
+                      <div style={{
+                        marginTop: 10,
+                        display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8,
+                      }}>
+                        {msg.providers_used.map((p) => (
+                          <span key={p} style={{
+                            fontSize: 11, fontWeight: 500,
+                            padding: "2px 8px",
+                            borderRadius: "var(--radius-full)",
+                            background: `${PROVIDER_COLORS[p] ?? "#8a93b0"}14`,
+                            color: PROVIDER_COLORS[p] ?? "var(--text-muted)",
+                            border: `1px solid ${PROVIDER_COLORS[p] ?? "#8a93b0"}2a`,
+                          }}>
+                            {PROVIDER_LABELS[p] ?? p}
+                          </span>
+                        ))}
+                        {msg.total_latency_ms && (
+                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                            {(msg.total_latency_ms / 1000).toFixed(1)}s
+                          </span>
+                        )}
+                        {msg.total_cost_usd !== undefined && msg.total_cost_usd > 0 && (
+                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                            ${msg.total_cost_usd.toFixed(4)}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
+                </div>
+              ))}
 
-          {/* Live progress */}
-          {isLoading && (
-            <WorkflowProgress
-              workflowId={activeWorkflowId}
-              isRunning={isLoading}
-            />
-          )}
+              {/* Live progress */}
+              {isLoading && (
+                <div style={{ padding: "8px 24px 8px 66px" }}>
+                  <WorkflowProgress
+                    workflowId={activeWorkflowId}
+                    isRunning={isLoading}
+                  />
+                </div>
+              )}
 
-          {/* Error */}
-          {error && (
-            <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 rounded px-3 py-2">
-              {error}
+              {/* Error */}
+              {error && (
+                <div style={{
+                  margin: "8px 24px",
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#dc2626",
+                  fontSize: 13,
+                }}>
+                  {error}
+                </div>
+              )}
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input area */}
-        <div className="border-t border-[#1e1e1e] bg-[#111] px-4 py-3">
-          <div className="flex gap-2 items-end">
-            <textarea
-              ref={textareaRef}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                inputLanguage === "lg" ? "Wandiika wano mu Luganda…"
-                : inputLanguage === "sw" ? "Andika hapa kwa Kiswahili…"
-                : "Type your prompt… (Shift+Enter for new line)"
-              }
-              disabled={isLoading}
-              rows={3}
-              className="flex-1 bg-[#0d0d0d] border border-[#222] rounded-lg px-3 py-2.5 text-sm text-[#ccc] placeholder-[#333] resize-none focus:outline-none focus:border-[#333] disabled:opacity-50 leading-relaxed"
-            />
-            <button
-              onClick={() => void handleSubmit()}
-              disabled={isLoading || !prompt.trim()}
-              className="flex-shrink-0 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] text-[#888] hover:text-[#ccc] disabled:opacity-30 disabled:cursor-not-allowed px-4 py-2.5 rounded-lg text-sm transition-colors"
-            >
-              {isLoading ? "…" : "Send"}
-            </button>
-          </div>
-          <div className="mt-1.5 text-[10px] text-[#333] text-right">
-            Enter to send · Shift+Enter for new line
+        {/* Input area — Gemini-style glowing search bar */}
+        <div style={{
+          padding: "16px 24px 20px",
+          background: isEmpty ? "transparent" : "#ffffff",
+          borderTop: isEmpty ? "none" : "1px solid var(--border)",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            maxWidth: isEmpty ? 680 : "100%",
+            margin: isEmpty ? "0 auto" : "0",
+            position: "relative",
+          }}>
+            {/* Glow ring — shows on focus, like Gemini */}
+            <div style={{
+              position: "absolute",
+              inset: -2,
+              borderRadius: "var(--radius-lg)",
+              background: inputFocused
+                ? "linear-gradient(135deg, #4a90d9, #2d72c2, #f5835a)"
+                : "transparent",
+              opacity: inputFocused ? 0.35 : 0,
+              transition: "opacity 0.3s ease",
+              zIndex: 0,
+              filter: "blur(8px)",
+            }} />
+
+            <div style={{
+              position: "relative",
+              zIndex: 1,
+              background: "#ffffff",
+              border: `1.5px solid ${inputFocused ? "var(--blue)" : "var(--border)"}`,
+              borderRadius: "var(--radius-lg)",
+              transition: "border-color 0.2s ease",
+              boxShadow: inputFocused
+                ? "0 0 0 4px var(--blue-glow)"
+                : "0 1px 4px rgba(0,0,0,0.06)",
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              <textarea
+                ref={textareaRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                placeholder={
+                  inputLanguage === "lg" ? "Wandiika wano mu Luganda…"
+                  : inputLanguage === "sw" ? "Andika hapa kwa Kiswahili…"
+                  : "Ask anything…"
+                }
+                disabled={isLoading}
+                rows={1}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  resize: "none",
+                  padding: "14px 18px 10px",
+                  fontSize: 15,
+                  color: "var(--text-primary)",
+                  lineHeight: 1.55,
+                  minHeight: 52,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  fontFamily: "var(--font)",
+                }}
+              />
+
+              {/* Bottom row */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 12px 10px",
+              }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  Enter to send · Shift+Enter for new line
+                </span>
+                <button
+                  onClick={() => void handleSubmit()}
+                  disabled={isLoading || !prompt.trim()}
+                  style={{
+                    height: 34,
+                    padding: "0 18px",
+                    borderRadius: "var(--radius-full)",
+                    border: "none",
+                    background: isLoading || !prompt.trim()
+                      ? "var(--surface-2)"
+                      : "linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%)",
+                    color: isLoading || !prompt.trim() ? "var(--text-muted)" : "#ffffff",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: isLoading || !prompt.trim() ? "not-allowed" : "pointer",
+                    transition: "all 0.15s",
+                    display: "flex", alignItems: "center", gap: 6,
+                    fontFamily: "var(--font)",
+                  }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div style={{
+                        width: 12, height: 12,
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderTopColor: "var(--text-muted)",
+                        borderRadius: "50%",
+                        animation: "spin 0.8s linear infinite",
+                      }} />
+                      Working…
+                    </>
+                  ) : (
+                    <>Send ↑</>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
